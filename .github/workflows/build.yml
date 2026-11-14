@@ -1,0 +1,53 @@
+name: GSKernel Android 10 (wayne)
+
+on:
+  push:
+    tags:
+      - 'build-*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ---- 安装 arm64 交叉 GCC 工具链 + 打包工具 ----
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-aarch64-linux-gnu \
+            ccache \
+            gcc-arm-linux-gnueabihf \
+            binutils-aarch64-linux-gnu \
+            libssl-dev \
+            bc bison flex \
+            zip unzip cpio python3 \
+            device-tree-compiler
+
+      # ---- 编译内核 + 打包 ----
+      - name: Build kernel
+        run: |
+          export CROSS_COMPILE=aarch64-linux-gnu-
+          export CROSS_COMPILE_ARM32=arm-linux-gnueabihf-
+          find . -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
+          # 禁用 WireGuard 自动更新：CI 下载不稳定，且脚本会先删除已有源码再解压
+          printf "#!/bin/sh\nexit 0\n" > scripts/fetch-latest-wireguard.sh
+          chmod +x scripts/fetch-latest-wireguard.sh
+          touch net/wireguard/.check
+          chmod +x build_ci.sh
+          ./build_ci.sh
+
+      # ---- 上传产物 ----
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: GSKernel-wayne-Android10
+          path: |
+            READY_ZIP/*.zip
+            out/arch/arm64/boot/Image.gz-dtb
+          if-no-files-found: error

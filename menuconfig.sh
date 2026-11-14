@@ -1,0 +1,25 @@
+#!/bin/bash
+export KERNELDIR=`readlink -f .`
+if [ -f ~/WORKING_DIRECTORY/GSKernel_stamp.sh ];
+	then
+	. ~/WORKING_DIRECTORY/GSKernel_stamp.sh
+fi
+if [ -f ~/WORKING_DIRECTORY/gcc-8.x-uber_aarch64.sh ];
+	then
+	. ~/WORKING_DIRECTORY/gcc-8.x-uber_aarch64.sh
+fi
+
+if [ ! -d $COMPILEDIR ]; then
+	COUT=$KERNELDIR/OUTPUT
+	mkdir $COUT
+else
+	COUT=$COMPILEDIR
+fi
+
+if [ -f $COUT/.config ];
+	then
+	make menuconfig O=$COUT ARCH=arm64
+else
+	exit 1
+fi
+
